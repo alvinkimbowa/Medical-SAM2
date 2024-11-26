@@ -15,6 +15,8 @@ from sam2_train.modeling.sam.prompt_encoder import PromptEncoder
 from sam2_train.modeling.sam.transformer import TwoWayTransformer
 from sam2_train.modeling.sam2_utils import get_1d_sine_pe, MLP, select_closest_cond_frames
 
+from mono2D import Mono2D
+
 # a large negative value as a placeholder score for missing objects
 NO_OBJ_SCORE = -1024.0
 
@@ -93,6 +95,9 @@ class SAM2Base(torch.nn.Module):
         compile_image_encoder: bool = False,
     ):
         super().__init__()
+
+        # Part 0: local phase features
+        self.mono = Mono2D(nscale=3, return_phase=True, return_phase_asym=False, return_ori=False, trainable=True)
 
         # Part 1: the image backbone
         self.image_encoder = image_encoder
@@ -462,6 +467,7 @@ class SAM2Base(torch.nn.Module):
 
     def forward_image(self, img_batch: torch.Tensor):
         """Get the image feature on the input batch."""
+        img_batch = self.mono(img_batch)
         backbone_out = self.image_encoder(img_batch)
         if self.use_high_res_features_in_sam:
             # precompute projected level 0 and level 1 features in SAM decoder

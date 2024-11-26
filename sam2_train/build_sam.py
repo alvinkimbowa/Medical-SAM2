@@ -78,11 +78,16 @@ def build_sam2_video_predictor(
 
 def _load_checkpoint(model, ckpt_path):
     if ckpt_path is not None:
+        # At the start of training, the monogenic layer keys are not present in the checkpoint
+        expected_missing_keys = ['mono.nscale', 'mono.wls', 'mono.sigmaonf']
+        
         sd = torch.load(ckpt_path, map_location="cpu")["model"]
-        missing_keys, unexpected_keys = model.load_state_dict(sd)
+        missing_keys, unexpected_keys = model.load_state_dict(sd, strict=False)
         if missing_keys:
             logging.error(missing_keys)
-            raise RuntimeError()
+            print("\nATTENTION! missing_keys", missing_keys)
+            if missing_keys != expected_missing_keys:
+                raise RuntimeError()
         if unexpected_keys:
             logging.error(unexpected_keys)
             raise RuntimeError()
